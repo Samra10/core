@@ -34,6 +34,8 @@
 // Number of handles around a graphic selection.
 #define GRAPHIC_HANDLE_COUNT 8
 
+static void lok_docview_callback_worker(int nType, const char* pPayload, void* pData);
+
 // We know that VirtualDevices use a DPI of 96.
 static const int DPI = 96;
 
@@ -981,7 +983,23 @@ static gboolean lok_docview_callback(gpointer pData)
     case LOK_CALLBACK_GRAPHIC_SELECTION:
     {
         if (strcmp(pCallback->m_pPayload, "EMPTY") != 0)
+        {
+            // invalidate old graphic selection
+            gchar* pRect = g_strdup_printf("%d, %d, %d, %d",
+                            pCallback->m_pDocView->m_pImpl->m_aGraphicSelection.x, pCallback->m_pDocView->m_pImpl->m_aGraphicSelection.y,
+                            pCallback->m_pDocView->m_pImpl->m_aGraphicSelection.width, pCallback->m_pDocView->m_pImpl->m_aGraphicSelection.height);
+            lok_docview_callback_worker(LOK_CALLBACK_INVALIDATE_TILES, pRect, pCallback->m_pDocView);
+            g_free (pRect);
+
             pCallback->m_pDocView->m_pImpl->m_aGraphicSelection = LOKDocView_Impl::payloadToRectangle(pCallback->m_pPayload);
+
+            // invalidate new graphic selection
+            pRect = g_strdup_printf("%d, %d, %d, %d",
+                            pCallback->m_pDocView->m_pImpl->m_aGraphicSelection.x, pCallback->m_pDocView->m_pImpl->m_aGraphicSelection.y,
+                            pCallback->m_pDocView->m_pImpl->m_aGraphicSelection.width, pCallback->m_pDocView->m_pImpl->m_aGraphicSelection.height);
+            lok_docview_callback_worker(LOK_CALLBACK_INVALIDATE_TILES, pRect, pCallback->m_pDocView);
+            g_free (pRect);
+        }
         else
             memset(&pCallback->m_pDocView->m_pImpl->m_aGraphicSelection, 0, sizeof(pCallback->m_pDocView->m_pImpl->m_aGraphicSelection));
         gtk_widget_queue_draw(GTK_WIDGET(pCallback->m_pDocView->m_pImpl->m_pEventBox));
